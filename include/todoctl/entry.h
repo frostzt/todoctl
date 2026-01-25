@@ -12,8 +12,13 @@
 #include <time.h>
 
 typedef struct {
-  int64_t entry_id;
+  uint64_t entry_id;
   char *entry_raw_data;
+
+  uint64_t _created_at;
+  uint64_t _deleted_at; /* a background thread will clean this up */
 } todo_entry_t;
+
+void create_entry(void);
 
 #endif // TODOCTL_ENTRY_H
