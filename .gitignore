@@ -53,3 +53,13 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Dirs
+/build
+/.cache
+
+# CMake Generated files
+# ignoring compile commands cause I think it should not be added
+# if someone compiles this they should symlink it; not sure what's
+# the best prac though
+compile_commands.json
