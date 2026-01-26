@@ -15,6 +15,6 @@
  * Gets current time in millis
  * @see https://stackoverflow.com/a/44896326/12034976
  */
-uint64_t time_in_millis(void);
+uint64_t get_time_in_millis(void);
 
 #endif // TODOCTL_UTIL_H
