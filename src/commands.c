@@ -17,6 +17,14 @@ int add_task_command(const char *task) {
     return STATUS_ERROR;
   }
   if (write_to_db(encoded_buffer, bytes_written) < 0) { return STATUS_ERROR; }
+  /* update the header with the latest byte */
+  if (__UNSAFE__update_last_entry(entry->entry_id) < 0) { return STATUS_ERROR; }
+
+  return 0;
+}
+
+int list_tasks_command(void) {
+  if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
 
   return 0;
 }

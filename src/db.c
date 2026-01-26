@@ -1,5 +1,6 @@
 #include "todoctl/db.h"
 #include "todoctl/errors.h"
+#include <stdint.h>
 
 static int __write_db_header(int fd) {
   if (fd < 0) {
@@ -149,6 +150,41 @@ int get_last_entry(uint64_t *value) {
   free(header);
   close(fd);
   *value = last_entry_id;
+  return 0;
+}
+
+int __UNSAFE__update_last_entry(const uint64_t last_record_id) {
+  wordexp_t exp_res;
+  wordexp(DEFAULT_DB_PATH, &exp_res, 0);
+
+  /* we'll assume that the file exists */
+  int fd = open(exp_res.we_wordv[0], O_RDWR);
+  wordfree(&exp_res);
+  if (fd < 0) {
+    perror("open()");
+    return STATUS_ERROR;
+  }
+
+  db_header_t *header = (db_header_t *)calloc(1, sizeof(db_header_t));
+  if (header == NULL) {
+    fprintf(stderr, "Failed to alloc db_header\n");
+    close(fd);
+    return STATUS_ERROR;
+  }
+
+  if (lseek(fd, 16, SEEK_SET) < 0) {
+    free(header);
+    close(fd);
+    return STATUS_ERROR;
+  }
+
+  const uint64_t last_record_id_endian = htonl(last_record_id);
+  if (write(fd, &last_record_id_endian, 8) != 8) {
+    free(header);
+    close(fd);
+    return STATUS_ERROR;
+  }
+
   return 0;
 }
 

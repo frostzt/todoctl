@@ -35,8 +35,33 @@ int validate_db_exists(int *_fd);
 /* creates and initializes a new db file for todoctl */
 int create_new_todo_db(void);
 
+/*----------------------------------------------------------------
+ * Utils
+ *----------------------------------------------------------------*/
+
 /* gets the last entry that was created from the header */
 int get_last_entry(uint64_t *);
+
+/* updates the header with the updated entry as last entry
+ *
+ * Observe the `db_header_t` struct above we have the following:
+ *
+ * |  MAGIC  |  VERSION  |  FILE_SIZE  | _LAST_ENTRY_ID  |
+ *   8 bytes    4 bytes     4 bytes         8 bytes
+ *
+ * The file will have the first 24 bytes as header always! The only
+ * problem we have is that we need to update the 4 bytes in the end
+ * to contain the updated id. This function does exactly that.
+ *
+ * Honestly NOT sure this is the best approach since the best way
+ * would possibly be to fetch the last record and check it?
+ * This is only possible because of the 8 bytes constraint otherwise
+ * we will have to rewrite the entire file.
+ *
+ * MARKING IT UNSAFE for now. This will be updated. Note I wrote it
+ * because I wanted to try something like this! THIS CAN CORRUPT DATA
+ */
+int __UNSAFE__update_last_entry(const uint64_t);
 
 /*----------------------------------------------------------------
  * DB OPS
