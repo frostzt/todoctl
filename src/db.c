@@ -18,7 +18,7 @@ static int __write_db_header(int fd) {
    * be fine to do */
   header->_last_entry_id = htonl(0);
   header->magic = htonl(DB_MAGIC);
-  header->version = htonl(DB_HEADER_VERSION);
+  header->version = htons(DB_HEADER_VERSION);
 
   // TODO: Need to add Entry size here
   header->filesize = htons(sizeof(db_header_t));
@@ -43,16 +43,11 @@ static int __validate_db_header(int fd) {
     return STATUS_ERROR;
   }
 
-  if (read(fd, header, sizeof(db_header_t)) != sizeof(db_header_t)) {
-    perror("read()");
-    free(header);
-    return STATUS_ERROR;
-  }
-
+  read(fd, header, sizeof(db_header_t));
   header->_last_entry_id = ntohl(header->_last_entry_id);
   header->version = ntohs(header->version);
   header->magic = ntohl(header->magic);
-  header->filesize = ntohl(header->filesize);
+  header->filesize = ntohs(header->filesize);
 
   if (header->magic != DB_MAGIC) {
     fprintf(stderr, "Invalid magic for db header\n");
@@ -61,7 +56,7 @@ static int __validate_db_header(int fd) {
   }
 
   if (header->version != DB_HEADER_VERSION) {
-    fprintf(stderr, "Invalid magic for db header\n");
+    fprintf(stderr, "Invalid db version\n");
     free(header);
     return TODOCTL_ERR_INVALID_VERSION;
   }
@@ -78,13 +73,18 @@ static int __validate_db_header(int fd) {
 }
 
 int validate_db_exists(int *_fd) {
-  int fd = *_fd;
+  int fd;
   if (_fd == NULL) {
-    fd = open(DEFAULT_DB_PATH, O_RDWR);
+    wordexp_t exp_res;
+    wordexp(DEFAULT_DB_PATH, &exp_res, 0);
+    fd = open(exp_res.we_wordv[0], O_RDWR);
+    wordfree(&exp_res);
     if (fd < 0) {
       fprintf(stderr, "TodoCtl db file does not exist! Please initialize first.\n");
       return TODOCTL_ERR_DB_DOES_NOT_EXIST;
     }
+  } else {
+    fd = *_fd;
   }
 
   /* if the file exists validate if the headers are valid */
@@ -120,7 +120,7 @@ int create_new_todo_db(void) {
   return 0;
 }
 
-uint64_t get_last_entry(void) {
+int get_last_entry(uint64_t *value) {
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
 
@@ -139,22 +139,17 @@ uint64_t get_last_entry(void) {
     return STATUS_ERROR;
   }
 
-  if (read(fd, header, sizeof(db_header_t)) != sizeof(db_header_t)) {
-    perror("read()");
-    free(header);
-    close(fd);
-    return STATUS_ERROR;
-  }
-
+  read(fd, header, sizeof(db_header_t));
   header->_last_entry_id = ntohl(header->_last_entry_id);
-  header->version = ntohs(header->version);
+  header->version = ntohl(header->version);
   header->magic = ntohl(header->magic);
   header->filesize = ntohl(header->filesize);
 
   uint64_t last_entry_id = header->_last_entry_id;
   free(header);
   close(fd);
-  return last_entry_id;
+  *value = last_entry_id;
+  return 0;
 }
 
 int write_to_db(char *buf, size_t n) {

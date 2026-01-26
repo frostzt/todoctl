@@ -2,9 +2,6 @@
 #include "todoctl/db.h"
 #include "todoctl/errors.h"
 #include "todoctl/util.h"
-#include <stdint.h>
-#include <string.h>
-#include <sys/_endian.h>
 
 int build_entry(const char *task, todo_entry_t **out) {
   if (task == NULL) { return STATUS_ERROR; }
@@ -15,13 +12,25 @@ int build_entry(const char *task, todo_entry_t **out) {
     return STATUS_ERROR;
   }
 
+  size_t task_len = strlen(task);
+  entry->entry_raw_data = malloc(task_len + 1);
+  if (entry->entry_raw_data == NULL) {
+    perror("malloc()");
+    free(entry);
+    return STATUS_ERROR;
+  }
+
   /* get last entry id from the db header */
-  uint64_t last_entry = get_last_entry();
+  uint64_t last_entry = 0;
+  if (get_last_entry(&last_entry) < 0) {
+    free(entry);
+    return STATUS_ERROR;
+  }
 
   entry->entry_id = last_entry + 1;
   entry->_created_at = get_time_in_millis();
   entry->_deleted_at = 0;
-  memcpy(entry->entry_raw_data, task, strlen(task));
+  memcpy(entry->entry_raw_data, task, task_len + 1);
 
   *out = entry;
   return 0;

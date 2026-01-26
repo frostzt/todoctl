@@ -9,6 +9,7 @@
 #define TODOCTL_DB_H
 
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,7 @@ int validate_db_exists(int *_fd);
 int create_new_todo_db(void);
 
 /* gets the last entry that was created from the header */
-uint64_t get_last_entry(void);
+int get_last_entry(uint64_t *);
 
 /*----------------------------------------------------------------
  * DB OPS
