@@ -19,6 +19,7 @@ endif()
 
 # ---------- Core Library ----------
 add_library(todoctl_core STATIC
+  src/commands.c
   src/db.c
   src/entry.c
   src/util.c

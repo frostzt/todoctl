@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "todoctl/commands.h"
 #include "todoctl/db.h"
 
 void print_usage(char *argv[]) {
@@ -17,14 +18,24 @@ int main(int argc, char *argv[]) {
    * an argument will have to think on how to approach this */
   while ((opt = getopt(argc, argv, "ia:")) != -1) {
     switch (opt) {
+    /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
-      if (create_new_todo_db() < 0) {
-        exit(EXIT_FAILURE);
-      }
+      if (create_new_todo_db() < 0) { exit(EXIT_FAILURE); }
 
       printf("Created .todo.db file at home directory...\n");
       break;
     }
+
+    /* Add a new task */
+    case 'a': {
+      const char *task = optarg;
+      if (add_task_command(task) < 0) {
+        fprintf(stderr, "Failed to add task");
+        exit(EXIT_FAILURE);
+      }
+      break;
+    }
+
     default: {
       print_usage(argv);
       exit(EXIT_FAILURE);
