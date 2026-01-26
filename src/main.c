@@ -22,6 +22,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
 
+      printf("Created .todo.db file at home directory...\n");
       break;
     }
     default: {
@@ -29,11 +30,6 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
     }
-  }
-
-  if (optind >= argc) {
-    print_usage(argv);
-    exit(EXIT_FAILURE);
   }
 
   return 0;

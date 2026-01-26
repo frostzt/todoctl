@@ -103,11 +103,11 @@ int create_new_todo_db(void) {
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
 
-  int fd = open(exp_res.we_wordv[0], O_RDWR | O_CREAT, 0644);
+  /* create a file O_EXCL makes sure if it already exists we won't overwrite it */
+  int fd = open(exp_res.we_wordv[0], O_RDWR | O_CREAT | O_EXCL, 0644);
   wordfree(&exp_res);
   if (fd < 0) {
     perror("open()");
-    fprintf(stderr, "Failed to create db file.\n");
     return TODOCTL_ERR_FAILED_DB_CREATE;
   }
 
