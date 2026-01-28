@@ -8,7 +8,9 @@
 #ifndef TODOCTL_DB_H
 #define TODOCTL_DB_H
 
+#include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +64,9 @@ int get_last_entry(uint64_t *);
  * because I wanted to try something like this! THIS CAN CORRUPT DATA
  */
 int __UNSAFE__update_last_entry(const uint64_t);
+
+/* same as above I am not sure how would this guy be managed to be honest */
+int __UNSAFE__update_file_size(const uint32_t, const bool);
 
 /*----------------------------------------------------------------
  * DB OPS

@@ -9,6 +9,7 @@ void print_usage(char *argv[]) {
   printf("Usage: %s [-a <task>] [-i]\n", argv[0]);
   printf("\t -i initialize todoctl\n");
   printf("\t -a adds a new task\n");
+  printf("\t -l list all the tasks\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -21,7 +22,6 @@ int main(int argc, char *argv[]) {
     /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
       if (create_new_todo_db() < 0) { exit(EXIT_FAILURE); }
-
       printf("Created .todo.db file at home directory...\n");
       break;
     }
@@ -33,6 +33,15 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to add task");
         exit(EXIT_FAILURE);
       }
+      break;
+    }
+
+    case 'l': {
+      break;
+    }
+
+    case '?': {
+      print_usage(argv);
       break;
     }
 

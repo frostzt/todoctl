@@ -5,10 +5,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Default to Debug build
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (default Debug)" FORCE)
+endif()
+
 add_compile_options(
   -Wall -Wextra -Werror -Wpedantic
   -O0 -g
 )
+add_compile_options(-Wno-gnu-zero-variadic-macro-arguments)
 
 # Add sanitizer for debug build
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -21,6 +27,7 @@ endif()
 add_library(todoctl_core STATIC
   src/commands.c
   src/db.c
+  src/debug.c
   src/entry.c
   src/util.c
 )
