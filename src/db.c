@@ -21,6 +21,7 @@ static int __write_db_header(int fd) {
   header->magic = htonll(DB_MAGIC);
   header->version = htonl(DB_HEADER_VERSION);
   header->filesize = htonl(sizeof(db_header_t));
+  header->_entries = htonl(0);
 
   if (write(fd, header, sizeof(db_header_t)) < 0) {
     DEBUG_ERROR("write(): failed to alloc db_header");
@@ -29,6 +30,25 @@ static int __write_db_header(int fd) {
     return STATUS_ERROR;
   }
 
+  return 0;
+}
+
+int read_header(int fd, db_header_t *out_header) {
+  if (fd < 0) {
+    DEBUG_ERROR("invalid fd provided\n");
+    return STATUS_ERROR;
+  }
+
+  if (read(fd, out_header, sizeof(db_header_t)) < 0) {
+    DEBUG_ERROR("failed to read db header\n");
+    return STATUS_ERROR;
+  }
+
+  out_header->_last_entry_id = ntohll(out_header->_last_entry_id);
+  out_header->magic = ntohll(out_header->magic);
+  out_header->version = ntohl(out_header->version);
+  out_header->filesize = ntohl(out_header->filesize);
+  out_header->_entries = ntohl(out_header->_entries);
   return 0;
 }
 
@@ -44,7 +64,11 @@ static int __validate_db_header(int fd) {
     return STATUS_ERROR;
   }
 
-  read(fd, header, sizeof(db_header_t));
+  if (read(fd, header, sizeof(db_header_t)) < 0) {
+    DEBUG_ERROR("failed to read db header\n");
+    return STATUS_ERROR;
+  }
+
   header->_last_entry_id = ntohll(header->_last_entry_id);
   header->magic = ntohll(header->magic);
   header->version = ntohl(header->version);
@@ -70,6 +94,7 @@ static int __validate_db_header(int fd) {
     return TODOCTL_ERR_CORRUPTED_DB;
   }
 
+  free(header);
   return 0;
 }
 
@@ -146,11 +171,8 @@ int get_last_entry(uint64_t *value) {
 
   read(fd, header, sizeof(db_header_t));
   header->_last_entry_id = ntohll(header->_last_entry_id);
-  header->magic = ntohll(header->magic);
-  header->version = ntohl(header->version);
-  header->filesize = ntohl(header->filesize);
-
   *value = header->_last_entry_id;
+
   free(header);
   close(fd);
   return 0;
@@ -176,9 +198,6 @@ int __UNSAFE__update_file_size(const uint32_t filesize, const bool add) {
   }
 
   read(fd, header, sizeof(db_header_t));
-  header->_last_entry_id = ntohll(header->_last_entry_id);
-  header->magic = ntohll(header->magic);
-  header->version = ntohl(header->version);
   header->filesize = ntohl(header->filesize);
 
   if (lseek(fd, 12, SEEK_SET) < 0) {
@@ -205,6 +224,121 @@ int __UNSAFE__update_file_size(const uint32_t filesize, const bool add) {
   return 0;
 }
 
+int __UNSAFE__update_db_header(int fd, const db_header_t *update, int flags) {
+  if (fd < 0) {
+    DEBUG_ERROR("invalid fd provided\n");
+    return STATUS_ERROR;
+  }
+
+  const size_t SKIP_FOR_FILE_SIZE = 12;
+  const size_t SKIP_FOR_LAST_ENTRY = 16;
+  const size_t SKIP_FOR_TOTAL_ENTRIES = 24;
+
+  if (flags == UPDATE_NONE) { return 0; }
+  db_header_t *header = (db_header_t *)malloc(sizeof(db_header_t));
+  if (header == NULL) {
+    DEBUG_ERROR("failed to alloc db_header_t\n");
+#ifdef DEBUG
+    perror("malloc()");
+#endif
+    return STATUS_ERROR;
+  }
+
+  /* read into header */
+  if (read(fd, header, 28) != 28) {
+    DEBUG_ERROR("failed to read into header\n");
+#ifdef DEBUG
+    perror("read()");
+#endif
+    free(header);
+    return STATUS_ERROR;
+  }
+
+  header->magic = ntohll(header->magic);
+  header->version = ntohl(header->version);
+  header->filesize = ntohl(header->filesize);
+  header->_last_entry_id = ntohll(header->_last_entry_id);
+  header->_entries = ntohll(header->_entries);
+
+  /* update file size */
+  if (flags & UPDATE_FILESIZE) {
+    uint32_t new_file_size = update->filesize;
+    if (flags & UPDATE_FILESIZE_ADD) { new_file_size = header->filesize + new_file_size; }
+    if (lseek(fd, SKIP_FOR_FILE_SIZE, SEEK_SET) != SKIP_FOR_FILE_SIZE) {
+      DEBUG_ERROR("failed to seek for updating filesize\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+
+    new_file_size = htonl(new_file_size);
+    if (write(fd, &new_file_size, 4) != 4) {
+      DEBUG_ERROR("failed to write update for filesize\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+  }
+
+  /* update last entry */
+  if (flags & UPDATE_LAST_ENTRY) {
+    uint64_t new_last_entry = update->_last_entry_id;
+    if (lseek(fd, SKIP_FOR_LAST_ENTRY, SEEK_SET) != SKIP_FOR_LAST_ENTRY) {
+      DEBUG_ERROR("failed to seek for updating last entry\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+
+    new_last_entry = htonll(new_last_entry);
+    if (write(fd, &new_last_entry, 8) != 8) {
+      DEBUG_ERROR("failed to write update for last entry\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+  }
+
+  /* update total entries */
+  if (flags & UPDATE_ENTRIES_COUNT) {
+    uint32_t new_total_entries = update->_entries;
+    if (lseek(fd, SKIP_FOR_TOTAL_ENTRIES, SEEK_SET) != SKIP_FOR_TOTAL_ENTRIES) {
+      DEBUG_ERROR("failed to seek for updating total entries\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+
+    if (flags & UPDATE_ENTRIES_COUNT_ADD) {
+      new_total_entries = header->_entries + update->_entries;
+    }
+
+    if (flags & UPDATE_ENTRIES_COUNT_INCR) { new_total_entries = header->_entries + 1; }
+
+    new_total_entries = htonl(new_total_entries);
+    if (write(fd, &new_total_entries, 4) != 4) {
+      DEBUG_ERROR("failed to write update for last entry\n");
+#ifdef DEBUG
+      perror("lseek()");
+#endif
+      free(header);
+      return STATUS_ERROR;
+    }
+  }
+
+  return 0;
+}
+
 int __UNSAFE__update_last_entry(const uint64_t last_record_id) {
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
@@ -217,7 +351,7 @@ int __UNSAFE__update_last_entry(const uint64_t last_record_id) {
     return STATUS_ERROR;
   }
 
-  db_header_t *header = (db_header_t *)calloc(1, sizeof(db_header_t));
+  db_header_t *header = (db_header_t *)malloc(sizeof(db_header_t));
   if (header == NULL) {
     fprintf(stderr, "Failed to alloc db_header\n");
     close(fd);

@@ -34,6 +34,7 @@
 
 typedef struct {
   uint64_t entry_id;
+  size_t entry_raw_data_len;
   char *entry_raw_data;
 
   uint64_t _created_at;
@@ -57,5 +58,16 @@ int build_entry(const char *, todo_entry_t **);
  *                                        |  MAX TTLength   |
  */
 int encode_entry(const todo_entry_t *, char *, size_t, size_t *);
+
+/* does what it says :) */
+int print_entry(const todo_entry_t *);
+
+/* prints multiple entries */
+int print_entries(const todo_entry_t **, size_t);
+
+int decode_entry(const uint8_t *buf, todo_entry_t **);
+
+/* reads entries from the database */
+int read_entries_from_db(int);
 
 #endif // TODOCTL_ENTRY_H

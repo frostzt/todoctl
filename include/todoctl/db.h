@@ -23,19 +23,32 @@
 #define DEFAULT_DB_PATH "~/.todo.db"
 #define DB_HEADER_VERSION 1
 
+#define UPDATE_NONE 0x00
+#define UPDATE_FILESIZE (1 << 0)      /* sets the filesize to the new value */
+#define UPDATE_LAST_ENTRY (1 << 2)    /* update last entry id */
+#define UPDATE_ENTRIES_COUNT (1 << 3) /* sets the last entry count */
+#define UPDATE_FILESIZE_ADD (1 << 4)  /* if set then filesize will be added to the current value */
+#define UPDATE_ENTRIES_COUNT_ADD (1 << 5) /* if set adds the provided value to the count */
+#define UPDATE_ENTRIES_COUNT_INCR (1 << 6) /* if set increments the entries count by 1 */
+#define UPDATE_ALL 0xFF
+
 typedef struct {
   uint64_t magic;
   uint32_t version;
   uint32_t filesize;
 
   uint64_t _last_entry_id;
+  uint32_t _entries;
 } db_header_t;
 
 /* validates if the db file already exists */
-int validate_db_exists(int *_fd);
+int validate_db_exists(int *);
 
 /* creates and initializes a new db file for todoctl */
 int create_new_todo_db(void);
+
+/* reads the header into the given struct */
+int read_header(int, db_header_t *);
 
 /*----------------------------------------------------------------
  * Utils
@@ -48,10 +61,10 @@ int get_last_entry(uint64_t *);
  *
  * Observe the `db_header_t` struct above we have the following:
  *
- * |  MAGIC  |  VERSION  |  FILE_SIZE  | _LAST_ENTRY_ID  |
- *   8 bytes    4 bytes     4 bytes         8 bytes
+ * |  MAGIC  |  VERSION  |  FILE_SIZE  | _LAST_ENTRY_ID  | _ENTRIES |
+ *   8 bytes    4 bytes     4 bytes         8 bytes         4 bytes
  *
- * The file will have the first 24 bytes as header always! The only
+ * The file will have the first 28 bytes as header always! The only
  * problem we have is that we need to update the 4 bytes in the end
  * to contain the updated id. This function does exactly that.
  *
@@ -67,6 +80,9 @@ int __UNSAFE__update_last_entry(const uint64_t);
 
 /* same as above I am not sure how would this guy be managed to be honest */
 int __UNSAFE__update_file_size(const uint32_t, const bool);
+
+/* more of a function that does what the above does but updates everything */
+int __UNSAFE__update_db_header(int, const db_header_t *, int);
 
 /*----------------------------------------------------------------
  * DB OPS
