@@ -54,7 +54,8 @@ int encode_entry(const todo_entry_t *entry, char *out, size_t out_size, size_t *
     return STATUS_ERROR;
   }
 
-  size_t required_size = 4 + 8 + 8 + 8 + 4 + raw_data_length;
+  size_t required_size = /* Length */ 4 + /* entry id */ 8 + /* created at */ 8 +
+                         /* deleted at */ 8 + /* data length */ 4 + raw_data_length;
   if (out_size < required_size) {
     DEBUG_ERROR("Buffer too small: need %zu bytes, have %zu\n", required_size, out_size);
     return TODOCTL_ERR_BUFFER_TOO_SMALL;
@@ -111,50 +112,135 @@ int print_entry(const todo_entry_t *entry) {
 }
 
 int print_entries(const todo_entry_t **entries, size_t n) {
-  if (n < 0) return -1;
   if (n == 0) return 0;
+  if (entries == NULL) return STATUS_ERROR;
 
   for (size_t i = 0; i < n; i++) {
     print_entry(entries[i]);
   }
-
   return 0;
 }
 
-// ❯ xxd ~/.todo.db
-// 00000000: 0000 0000 004e 4e4e 0000 0001 0000 003e  .....NNN.......>
-//                               |LENGTH | | ENTRY
-// 00000010: 0000 0000 0000 0001 0000 0026 0000 0000  ...........&....
-//               ID  | |    CREATED AT   | | DELETED
-// 00000020: 0000 0001 0000 019c 0fba aa70 0000 0000  ...........p....
-//            AT     | |DATALEN| |    DATA    |
-// 00000030: 0000 0000 0000 0006 736f 7572 6176       ........sourav
-//                                s o  u r  a v
-int read_entries_from_db(int fd) {
+// ✦ ❯ xxd ~/.todo.db
+//           | MAGIC           | |VERSION| |FILESZ |
+// 00000000: 0000 0000 004e 4e4e 0000 0001 0000 0020  .....NNN.......
+//           | LAST ENTRY ID   | |ENTRIES| PADDING
+// 00000010: 0000 0000 0000 0002 0000 0002 0000 0000  ................
+//           | LENGTH| | ENTRY ID        | | CREATED
+// 00000020: 0000 0026 0000 0000 0000 0001 0000 019c  ...&............
+//           AT      | |    DELETED AT   | |DATALEN|
+// 00000030: 13f9 780e 0000 0000 0000 0000 0000 0006  ..x.............
+//           |  SOURAV    | | repeats
+// 00000040: 736f 7572 6176 0000 0026 0000 0000 0000  sourav...&......
+// 00000050: 0002 0000 019c 13fa 1537 0000 0000 0000  .........7......
+// 00000060: 0000 0000 0006 736f 7572 6176            ......sourav
+int read_entries_from_db(int fd, const db_header_t *header, todo_entry_t **entries) {
   if (fd < 0) {
-    DEBUG_ERROR("invalid fd provided");
+    DEBUG_ERROR("invalid fd provided\n");
+    return STATUS_ERROR;
+  }
+  if (header == NULL) {
+    DEBUG_ERROR("header is NULL\n");
+    return STATUS_ERROR;
+  }
+  if (entries == NULL) {
+    DEBUG_ERROR("entries array is NULL\n");
     return STATUS_ERROR;
   }
 
-  /* the db header is always 24 bytes which we will skip over */
-  if (lseek(fd, 24, SEEK_SET) < 0) {
-    DEBUG_ERROR("failed to offset the cursor ahead of the header");
+  /* the db header is always 32 bytes (28 + 4 padding) which we will skip over */
+  if (lseek(fd, sizeof(db_header_t), SEEK_SET) < 0) {
+    DEBUG_ERROR("failed to offset the cursor ahead of the header\n");
     return STATUS_ERROR;
   }
 
-  uint8_t length_buf[4];
-  if (read(fd, &length_buf, 4) != 4) {
+  /* loop over and get all the entries */
+  for (size_t i = 0; i < header->_entries; i++) {
+    uint8_t length_buf[4];
+    if (read(fd, &length_buf, 4) != 4) {
 #ifdef DEBUG
-    perror("read()");
+      perror("read()");
 #endif
-    DEBUG_ERROR("failed to read length from buffer");
-    return STATUS_ERROR;
-  }
+      DEBUG_ERROR("failed to read length from buffer\n");
+      return STATUS_ERROR;
+    }
 
-  /* get total length */
-  uint32_t total_length;
-  memcpy(&total_length, length_buf, 4);
-  total_length = ntohl(total_length);
+    /* get total length */
+    uint32_t total_length;
+    memcpy(&total_length, length_buf, 4);
+    total_length = ntohl(total_length);
+
+    todo_entry_t *entry = (todo_entry_t *)malloc(sizeof(todo_entry_t));
+    if (entry == NULL) {
+#ifdef DEBUG
+      perror("malloc()");
+#endif
+      DEBUG_ERROR("failed to alloc entry\n");
+      return STATUS_ERROR;
+    }
+
+    uint8_t buffer[28];
+    /* read from entry_id to data len all into the buffer */
+    if (read(fd, &buffer, 28) != 28) {
+#ifdef DEBUG
+      perror("read()");
+#endif
+      DEBUG_ERROR("failed to read entry id from buffer\n");
+      return STATUS_ERROR;
+    }
+
+    /* parse entry id from the buffer */
+    uint64_t entry_id;
+    memcpy(&entry_id, buffer, 8);
+    entry->entry_id = ntohll(entry_id);
+
+    /* parse created_at from the buffer */
+    uint64_t created_at;
+    memcpy(&created_at, buffer + 8, 8);
+    entry->_created_at = ntohll(created_at);
+
+    /* parse deleted_at from the buffer */
+    uint64_t deleted_at;
+    memcpy(&deleted_at, buffer + 16, 8);
+    entry->_deleted_at = ntohll(deleted_at);
+
+    /* parse data_len from the buffer */
+    uint32_t data_len;
+    memcpy(&data_len, buffer + 24, 4);
+    data_len = ntohl(data_len);
+
+    /* match if the total length matches the actual bytes */
+    size_t expected = 4 + 8 + 8 + 8 + 4 + data_len;
+    if (total_length != expected) {
+      DEBUG_ERROR("Corrupted entry: length mismatch\n");
+      return STATUS_ERROR;
+    }
+
+    /* allocate space for the string */
+    entry->entry_raw_data = malloc(data_len + 1);
+    if (entry->entry_raw_data == NULL) {
+#ifdef DEBUG
+      perror("malloc()");
+#endif
+      free(entry);
+      DEBUG_ERROR("failed alloc raw data bytes\n");
+      return STATUS_ERROR;
+    }
+
+    if (read(fd, entry->entry_raw_data, data_len) != data_len) {
+#ifdef DEBUG
+      perror("read()");
+#endif
+      free(entry->entry_raw_data);
+      free(entry);
+      DEBUG_ERROR("failed to read raw string into buffer\n");
+      return STATUS_ERROR;
+    }
+    entry->entry_raw_data[data_len] = '\0';
+    entry->entry_raw_data_len = (size_t)data_len;
+
+    entries[i] = entry;
+  }
 
   return 0;
 }

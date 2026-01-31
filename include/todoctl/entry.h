@@ -8,6 +8,7 @@
 #ifndef TODOCTL_ENTRY_H
 #define TODOCTL_ENTRY_H
 
+#include "todoctl/db.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,9 +66,7 @@ int print_entry(const todo_entry_t *);
 /* prints multiple entries */
 int print_entries(const todo_entry_t **, size_t);
 
-int decode_entry(const uint8_t *buf, todo_entry_t **);
-
 /* reads entries from the database */
-int read_entries_from_db(int);
+int read_entries_from_db(int, const db_header_t *, todo_entry_t **);
 
 #endif // TODOCTL_ENTRY_H

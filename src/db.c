@@ -69,7 +69,6 @@ static int __validate_db_header(int fd) {
     return STATUS_ERROR;
   }
 
-  header->_last_entry_id = ntohll(header->_last_entry_id);
   header->magic = ntohll(header->magic);
   header->version = ntohl(header->version);
   header->filesize = ntohl(header->filesize);
@@ -86,13 +85,14 @@ static int __validate_db_header(int fd) {
     return TODOCTL_ERR_INVALID_VERSION;
   }
 
-  struct stat buffer = {0};
-  fstat(fd, &buffer);
-  if (header->filesize != buffer.st_size) {
-    DEBUG_ERROR("corrupted db file\n");
-    free(header);
-    return TODOCTL_ERR_CORRUPTED_DB;
-  }
+  /* TODO: Now filesize is complicated as we have stuff written */
+  // struct stat buffer = {0};
+  // fstat(fd, &buffer);
+  // if (header->filesize != buffer.st_size) {
+  //   DEBUG_ERROR("corrupted db file\n");
+  //   free(header);
+  //   return TODOCTL_ERR_CORRUPTED_DB;
+  // }
 
   free(header);
   return 0;
@@ -258,7 +258,7 @@ int __UNSAFE__update_db_header(int fd, const db_header_t *update, int flags) {
   header->version = ntohl(header->version);
   header->filesize = ntohl(header->filesize);
   header->_last_entry_id = ntohll(header->_last_entry_id);
-  header->_entries = ntohll(header->_entries);
+  header->_entries = ntohl(header->_entries);
 
   /* update file size */
   if (flags & UPDATE_FILESIZE) {

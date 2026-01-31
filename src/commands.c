@@ -37,7 +37,8 @@ int add_task_command(const char *task) {
   header._last_entry_id = entry->entry_id;
   header.filesize = (uint32_t)bytes_written;
   __UNSAFE__update_db_header(fd, &header,
-                             UPDATE_LAST_ENTRY | UPDATE_FILESIZE_ADD | UPDATE_ENTRIES_COUNT_INCR);
+                             UPDATE_LAST_ENTRY | UPDATE_FILESIZE_ADD | UPDATE_ENTRIES_COUNT |
+                                 UPDATE_ENTRIES_COUNT_INCR);
 
   close(fd);
   return 0;
@@ -45,7 +46,9 @@ int add_task_command(const char *task) {
 
 int list_tasks_command(const size_t limit) {
   if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
-  printf("%zu", limit);
+
+  // TODO: Handle limits
+  printf("%zu\n", limit);
 
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
@@ -53,13 +56,49 @@ int list_tasks_command(const size_t limit) {
   wordfree(&exp_res);
   if (fd < 0) {
     DEBUG_ERROR("failed to open db file\n");
+#ifdef DEBUG
+    perror("open()");
+#endif
     return STATUS_ERROR;
   }
 
   /* read into header */
   db_header_t *header = (db_header_t *)malloc(sizeof(db_header_t));
-  if (read_header(fd, header) < 0) { return STATUS_ERROR; }
-  read_entries_from_db(fd);
+  if (header == NULL) {
+    DEBUG_ERROR("failed to allocate header\n");
+#ifdef DEBUG
+    perror("malloc()");
+#endif
+    return STATUS_ERROR;
+  }
+  if (read_header(fd, header) < 0) {
+    free(header);
+    close(fd);
+    return STATUS_ERROR;
+  }
+
+  /* read entries from the db */
+  todo_entry_t **entries = malloc(sizeof(todo_entry_t *) * header->_entries);
+  if (entries == NULL) {
+    DEBUG_ERROR("failed to allocate entries\n");
+#ifdef DEBUG
+    perror("malloc()");
+#endif
+    free(header);
+    close(fd);
+    return STATUS_ERROR;
+  }
+  if (read_entries_from_db(fd, header, entries) < 0) { return STATUS_ERROR; }
+
+  /* print entries */
+  print_entries((const todo_entry_t **)entries, header->_entries);
+
+  /* free all the entries */
+  for (size_t i = 0; i < header->_entries; i++) {
+    free(entries[i]->entry_raw_data);
+    free(entries[i]);
+  }
+  free(header);
 
   close(fd);
   return 0;

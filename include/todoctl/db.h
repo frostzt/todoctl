@@ -28,7 +28,7 @@
 #define UPDATE_LAST_ENTRY (1 << 2)    /* update last entry id */
 #define UPDATE_ENTRIES_COUNT (1 << 3) /* sets the last entry count */
 #define UPDATE_FILESIZE_ADD (1 << 4)  /* if set then filesize will be added to the current value */
-#define UPDATE_ENTRIES_COUNT_ADD (1 << 5) /* if set adds the provided value to the count */
+#define UPDATE_ENTRIES_COUNT_ADD (1 << 5)  /* if set adds the provided value to the count */
 #define UPDATE_ENTRIES_COUNT_INCR (1 << 6) /* if set increments the entries count by 1 */
 #define UPDATE_ALL 0xFF
 
