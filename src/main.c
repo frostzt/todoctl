@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
   /* parse flags right now `init` is a flag and does not take
    * an argument will have to think on how to approach this */
-  while ((opt = getopt(argc, argv, "ia:")) != -1) {
+  while ((opt = getopt(argc, argv, "lia:")) != -1) {
     switch (opt) {
     /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
@@ -30,13 +30,19 @@ int main(int argc, char *argv[]) {
     case 'a': {
       const char *task = optarg;
       if (add_task_command(task) < 0) {
-        fprintf(stderr, "Failed to add task");
+        fprintf(stderr, "Failed to add task!");
         exit(EXIT_FAILURE);
       }
       break;
     }
 
+    /* list all the tasks */
     case 'l': {
+      // TODO: Handle limits
+      if (list_tasks_command(1) < 0) {
+        fprintf(stderr, "Failed to list tasks!");
+        exit(EXIT_FAILURE);
+      }
       break;
     }
 

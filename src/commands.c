@@ -48,7 +48,7 @@ int list_tasks_command(const size_t limit) {
   if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
 
   // TODO: Handle limits
-  printf("%zu\n", limit);
+  DEBUG_WARN("Limit provided %d but not implemented", limit);
 
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
