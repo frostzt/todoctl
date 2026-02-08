@@ -149,17 +149,17 @@ int update_entry_done(int fd, const db_header_t *header, const uint64_t entry_id
   size_t bytes_read = 0;
   /* this will be the last entry read and is the one we need to mark */
   int entries_read = read_entries_from_db(fd, header, entries, &bytes_read, &stop_at);
-  if (entries_read <= 0) {
+  if (entries_read < 0) {
     DEBUG_ERROR("failed to read entries from db\n");
     /* free all the entries */
-    for (size_t i = 0; i < header->_entries; i++) {
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
       free(entries[i]->entry_raw_data);
       free(entries[i]);
     }
     return STATUS_ERROR;
   }
 
-  size_t last_entry_data_len = entries[entries_read - 1]->entry_raw_data_len;
+  size_t last_entry_data_len = entries[entries_read]->entry_raw_data_len;
   size_t total_seek = (sizeof(db_header_t) + bytes_read) - (last_entry_data_len + 4 + 8);
 
   if (lseek(fd, total_seek, SEEK_SET) < 0) {
@@ -169,7 +169,7 @@ int update_entry_done(int fd, const db_header_t *header, const uint64_t entry_id
 #endif
 
     /* free all the entries */
-    for (size_t i = 0; i < header->_entries; i++) {
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
       free(entries[i]->entry_raw_data);
       free(entries[i]);
     }
@@ -184,7 +184,7 @@ int update_entry_done(int fd, const db_header_t *header, const uint64_t entry_id
 #endif
 
     /* free all the entries */
-    for (size_t i = 0; i < header->_entries; i++) {
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
       free(entries[i]->entry_raw_data);
       free(entries[i]);
     }
