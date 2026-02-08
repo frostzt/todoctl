@@ -157,7 +157,7 @@ int update_entry_done(int fd, const db_header_t *header, const uint64_t entry_id
   }
 
   size_t last_entry_data_len = entries[entries_read - 1]->entry_raw_data_len;
-  size_t total_seek = sizeof(db_header_t) + (bytes_read - last_entry_data_len - 4);
+  size_t total_seek = (sizeof(db_header_t) + bytes_read) - (last_entry_data_len + 4 + 8);
 
   if (lseek(fd, total_seek, SEEK_SET) < 0) {
     DEBUG_ERROR("failed to seek for setting the entry done\n");
@@ -263,7 +263,7 @@ int read_entries_from_db(int fd, const db_header_t *header, todo_entry_t **entri
       DEBUG_ERROR("failed to read entry id from buffer\n");
       return STATUS_ERROR;
     }
-    if (bytes_read != NULL) { *bytes_read += 32; }
+    if (bytes_read != NULL) { *bytes_read += 36; }
 
     /* parse entry id from the buffer */
     uint64_t entry_id;

@@ -7,11 +7,9 @@
 
 int add_task_command(const char *task) {
   if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
-
   /* build this entry from the user's task */
   todo_entry_t *entry = NULL;
   if (build_entry(task, &entry) < 0) { return STATUS_ERROR; }
-
   /* encode and flush into the database */
   char encoded_buffer[MAX_TODO_TEXT_LENGTH];
   size_t bytes_written = 0;
@@ -19,7 +17,6 @@ int add_task_command(const char *task) {
     return STATUS_ERROR;
   }
   if (write_to_db(encoded_buffer, bytes_written) < 0) { return STATUS_ERROR; }
-
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
   int fd = open(exp_res.we_wordv[0], O_RDWR);
@@ -32,7 +29,6 @@ int add_task_command(const char *task) {
     close(fd);
     return STATUS_ERROR;
   }
-
   /* update the header with the details */
   db_header_t header;
   header._entries = 1;
@@ -41,14 +37,12 @@ int add_task_command(const char *task) {
   __UNSAFE__update_db_header(fd, &header,
                              UPDATE_LAST_ENTRY | UPDATE_FILESIZE_ADD | UPDATE_ENTRIES_COUNT |
                                  UPDATE_ENTRIES_COUNT_INCR);
-
   close(fd);
   return 0;
 }
 
 int list_tasks_command(void) {
   if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
-
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
   int fd = open(exp_res.we_wordv[0], O_RDONLY);
@@ -127,6 +121,7 @@ int mark_task_done(const uint64_t id) {
     close(fd);
     return STATUS_ERROR;
   }
+  /* find and mark the entry as done */
   if (update_entry_done(fd, header, id) < 0) {
     DEBUG_ERROR("failed to allocate header\n");
     free(header);
