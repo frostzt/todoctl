@@ -12,15 +12,21 @@ endif()
 
 add_compile_options(
   -Wall -Wextra -Werror -Wpedantic
-  -O0 -g
 )
 add_compile_options(-Wno-gnu-zero-variadic-macro-arguments)
 
-# Add sanitizer for debug build
+# debug build
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_options(-O0 -g)
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
   add_compile_definitions(DEBUG)
+endif()
+
+# release build
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_compile_options(-O3)
+  add_compile_definitions(NDEBUG)
 endif()
 
 # ---------- Core Library ----------
@@ -38,3 +44,7 @@ target_include_directories(todoctl_core PUBLIC include)
 add_executable(todoctl src/main.c)
 target_link_libraries(todoctl PRIVATE todoctl_core)
 
+# ---------- Install ----------
+install(TARGETS todoctl
+  RUNTIME DESTINATION bin
+)

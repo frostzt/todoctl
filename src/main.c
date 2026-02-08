@@ -10,6 +10,7 @@ void print_usage(char *argv[]) {
   printf("\t -i initialize todoctl\n");
   printf("\t -a adds a new task\n");
   printf("\t -l list all the tasks\n");
+  printf("\t -k marks a task as done\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -17,12 +18,23 @@ int main(int argc, char *argv[]) {
 
   /* parse flags right now `init` is a flag and does not take
    * an argument will have to think on how to approach this */
-  while ((opt = getopt(argc, argv, "lia:")) != -1) {
+  while ((opt = getopt(argc, argv, "lia:k:")) != -1) {
     switch (opt) {
     /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
       if (create_new_todo_db() < 0) { exit(EXIT_FAILURE); }
       printf("Created .todo.db file at home directory...\n");
+      break;
+    }
+
+    /* update a task */
+    case 'k': {
+      const char *task_id = optarg;
+      long long value = atoi(task_id);
+      if (mark_task_done(value)) {
+        fprintf(stderr, "Failed to update the provided task");
+        exit(EXIT_FAILURE);
+      }
       break;
     }
 
@@ -38,8 +50,8 @@ int main(int argc, char *argv[]) {
 
     /* list all the tasks */
     case 'l': {
-      // TODO: Handle limits
-      if (list_tasks_command(1) < 0) {
+      // TODO: Add implementation for limits in this command
+      if (list_tasks_command() < 0) {
         fprintf(stderr, "Failed to list tasks!");
         exit(EXIT_FAILURE);
       }

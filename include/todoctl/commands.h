@@ -9,11 +9,15 @@
 #define TODOCTL_COMMANDS_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 /* adds a task into db */
 int add_task_command(const char *);
 
 /* list all the tasks available */
-int list_tasks_command(const size_t limit);
+int list_tasks_command(void);
+
+/* marks a task done */
+int mark_task_done(const uint64_t id);
 
 #endif // TODOCTL_COMMANDS_H

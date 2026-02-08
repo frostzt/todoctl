@@ -57,7 +57,8 @@ int read_header(int, db_header_t *);
 /* gets the last entry that was created from the header */
 int get_last_entry(uint64_t *);
 
-/* updates the header with the updated entry as last entry
+/* updates the header with the updated db header files controlled
+ * via flags that can be passed to configure behavior
  *
  * Observe the `db_header_t` struct above we have the following:
  *
@@ -76,12 +77,6 @@ int get_last_entry(uint64_t *);
  * MARKING IT UNSAFE for now. This will be updated. Note I wrote it
  * because I wanted to try something like this! THIS CAN CORRUPT DATA
  */
-int __UNSAFE__update_last_entry(const uint64_t);
-
-/* same as above I am not sure how would this guy be managed to be honest */
-int __UNSAFE__update_file_size(const uint32_t, const bool);
-
-/* more of a function that does what the above does but updates everything */
 int __UNSAFE__update_db_header(int, const db_header_t *, int);
 
 /*----------------------------------------------------------------
