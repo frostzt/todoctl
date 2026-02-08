@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "todoctl/commands.h"
 #include "todoctl/db.h"
+#include "todoctl/entry.h"
 
 void print_usage(char *argv[]) {
   printf("Usage: %s [-a <task>] [-i]\n", argv[0]);
@@ -17,7 +19,7 @@ int main(int argc, char *argv[]) {
   int opt;
   /* parse flags right now `init` is a flag and does not take
    * an argument will have to think on how to approach this */
-  while ((opt = getopt(argc, argv, "lia:k:")) != -1) {
+  while ((opt = getopt(argc, argv, "ia:k:l:")) != -1) {
     switch (opt) {
     /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
@@ -49,8 +51,13 @@ int main(int argc, char *argv[]) {
 
     /* list all the tasks */
     case 'l': {
+      const char *ask = optarg;
+      int flags = PRINT_ONLY_ACTIVE;
+      if (strcmp(ask, "all") == 0) { flags = PRINT_ALL; }
+      if (strcmp(ask, "active") == 0) { flags = PRINT_ONLY_ACTIVE; }
+
       // TODO: Add implementation for limits in this command
-      if (list_tasks_command() < 0) {
+      if (list_tasks_command(flags) < 0) {
         fprintf(stderr, "Failed to list tasks!");
         exit(EXIT_FAILURE);
       }

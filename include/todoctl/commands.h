@@ -15,7 +15,7 @@
 int add_task_command(const char *);
 
 /* list all the tasks available */
-int list_tasks_command(void);
+int list_tasks_command(int);
 
 /* marks a task done */
 int mark_task_done(const uint64_t id);

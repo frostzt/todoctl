@@ -41,7 +41,7 @@ int add_task_command(const char *task) {
   return 0;
 }
 
-int list_tasks_command(void) {
+int list_tasks_command(int flags) {
   if (validate_db_exists(NULL) < 0) { return STATUS_ERROR; }
   wordexp_t exp_res;
   wordexp(DEFAULT_DB_PATH, &exp_res, 0);
@@ -82,7 +82,7 @@ int list_tasks_command(void) {
   }
   if (read_entries_from_db(fd, header, entries, NULL, NULL) < 0) { return STATUS_ERROR; }
   /* print entries */
-  print_entries((const todo_entry_t **)entries, header->_entries, PRINT_ONLY_ACTIVE);
+  print_entries((const todo_entry_t **)entries, header->_entries, flags);
   /* free all the entries */
   for (size_t i = 0; i < header->_entries; i++) {
     free(entries[i]->entry_raw_data);
@@ -123,7 +123,7 @@ int mark_task_done(const uint64_t id) {
   }
   /* find and mark the entry as done */
   if (update_entry_done(fd, header, id) < 0) {
-    DEBUG_ERROR("failed to allocate header\n");
+    DEBUG_ERROR("failed to update entry\n");
     free(header);
     close(fd);
     return STATUS_ERROR;
