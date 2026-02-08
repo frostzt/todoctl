@@ -15,7 +15,6 @@ void print_usage(char *argv[]) {
 
 int main(int argc, char *argv[]) {
   int opt;
-
   /* parse flags right now `init` is a flag and does not take
    * an argument will have to think on how to approach this */
   while ((opt = getopt(argc, argv, "lia:k:")) != -1) {

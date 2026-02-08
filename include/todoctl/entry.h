@@ -34,6 +34,10 @@
 /* total = 24 + 4 + 4096 = 4124 bytes */
 #define ENCODED_ENTRY_MAX_SIZE (ENTRY_FIXED_SIZE + TEXT_LENGTH_PREFIX + MAX_TODO_TEXT_LENGTH)
 
+#define PRINT_ALL 0x00
+#define PRINT_EXCEPT_DELETED (1 << 0) /* print all except deleted */
+#define PRINT_ONLY_ACTIVE (1 << 1)    /* print only currently active entries */
+
 typedef struct {
   uint64_t entry_id;
   size_t entry_raw_data_len;
@@ -66,7 +70,7 @@ int encode_entry(const todo_entry_t *, char *, size_t, size_t *);
 int print_entry(const todo_entry_t *);
 
 /* prints multiple entries */
-int print_entries(const todo_entry_t **, size_t);
+int print_entries(const todo_entry_t **, size_t, int);
 
 /* reads entries from the database, if stopat is provided then the return value is
  * the amount of bytes read, otherwise return 0 or -1 */

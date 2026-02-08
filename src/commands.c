@@ -82,7 +82,7 @@ int list_tasks_command(void) {
   }
   if (read_entries_from_db(fd, header, entries, NULL, NULL) < 0) { return STATUS_ERROR; }
   /* print entries */
-  print_entries((const todo_entry_t **)entries, header->_entries);
+  print_entries((const todo_entry_t **)entries, header->_entries, PRINT_ONLY_ACTIVE);
   /* free all the entries */
   for (size_t i = 0; i < header->_entries; i++) {
     free(entries[i]->entry_raw_data);

@@ -116,11 +116,14 @@ int print_entry(const todo_entry_t *entry) {
   return 0;
 }
 
-int print_entries(const todo_entry_t **entries, size_t n) {
+int print_entries(const todo_entry_t **entries, size_t n, int flags) {
   if (n == 0) return 0;
   if (entries == NULL) return STATUS_ERROR;
 
   for (size_t i = 0; i < n; i++) {
+    const todo_entry_t *current_entry = entries[i];
+    if ((flags & PRINT_EXCEPT_DELETED) && current_entry->_deleted_at > 0) { continue; }
+    if ((flags & PRINT_ONLY_ACTIVE) && current_entry->_done_at > 0) { continue; }
     print_entry(entries[i]);
   }
   return 0;
