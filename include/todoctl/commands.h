@@ -20,4 +20,7 @@ int list_tasks_command(int);
 /* marks a task done */
 int mark_task_done(const uint64_t id);
 
+/* deletes a task */
+int delete_task(const uint64_t id);
+
 #endif // TODOCTL_COMMANDS_H

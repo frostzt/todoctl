@@ -19,12 +19,23 @@ int main(int argc, char *argv[]) {
   int opt;
   /* parse flags right now `init` is a flag and does not take
    * an argument will have to think on how to approach this */
-  while ((opt = getopt(argc, argv, "ia:k:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "ia:k:l:d:")) != -1) {
     switch (opt) {
     /* TODO: Right now init via flag; need a command like `todoctl init` */
     case 'i': {
       if (create_new_todo_db() < 0) { exit(EXIT_FAILURE); }
       printf("Created .todo.db file at home directory...\n");
+      break;
+    }
+
+    /* delete a task */
+    case 'd': {
+      const char *task_id = optarg;
+      long long value = atoi(task_id);
+      if (delete_task(value)) {
+        fprintf(stderr, "Failed to delete the provided task");
+        exit(EXIT_FAILURE);
+      }
       break;
     }
 

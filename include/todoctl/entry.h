@@ -34,9 +34,9 @@
 /* total = 24 + 4 + 4096 = 4124 bytes */
 #define ENCODED_ENTRY_MAX_SIZE (ENTRY_FIXED_SIZE + TEXT_LENGTH_PREFIX + MAX_TODO_TEXT_LENGTH)
 
-#define PRINT_ALL 0x00
-#define PRINT_EXCEPT_DELETED (1 << 0) /* print all except deleted */
-#define PRINT_ONLY_ACTIVE (1 << 1)    /* print only currently active entries */
+#define PRINT_ALL (1 << 0)
+#define PRINT_EXCEPT_DELETED (1 << 1) /* print all except deleted */
+#define PRINT_ONLY_ACTIVE (1 << 2)    /* print only currently active entries */
 
 typedef struct {
   uint64_t entry_id;
@@ -82,5 +82,8 @@ int read_entries_from_db(int, const db_header_t *, todo_entry_t **, size_t *, ui
  * the provided entry id. Once we have that we'll use `lseek` to set our
  * cursor at the right position and update with the entry_id */
 int update_entry_done(int, const db_header_t *, const uint64_t);
+
+/* marks the deleted_at in an entry */
+int mark_entry_deleted(int, const db_header_t *, const uint64_t);
 
 #endif // TODOCTL_ENTRY_H

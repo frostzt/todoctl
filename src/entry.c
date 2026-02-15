@@ -122,9 +122,16 @@ int print_entries(const todo_entry_t **entries, size_t n, int flags) {
 
   for (size_t i = 0; i < n; i++) {
     const todo_entry_t *current_entry = entries[i];
-    if ((flags & PRINT_EXCEPT_DELETED) && current_entry->_deleted_at > 0) { continue; }
+    /* if print all then print all */
+    if (flags & PRINT_ALL) {
+      print_entry(current_entry);
+      continue;
+    }
+    /* if we request for active only print done at ones */
     if ((flags & PRINT_ONLY_ACTIVE) && current_entry->_done_at > 0) { continue; }
-    print_entry(entries[i]);
+    /* if deleted at is set we won't print */
+    if (current_entry->_deleted_at != 0) { continue; }
+    print_entry(current_entry);
   }
   return 0;
 }
@@ -190,6 +197,74 @@ int update_entry_done(int fd, const db_header_t *header, const uint64_t entry_id
     }
     return STATUS_ERROR;
   }
+
+  return 0;
+}
+
+int mark_entry_deleted(int fd, const db_header_t *header, const uint64_t entry_id) {
+  printf("hello from the otherside\n");
+  if (fd < 0) {
+    DEBUG_ERROR("invalid fd provided\n");
+    return STATUS_ERROR;
+  }
+
+  todo_entry_t **entries = malloc(sizeof(todo_entry_t *) * header->_entries);
+  if (entries == NULL) {
+    DEBUG_ERROR("failed to allocate entries\n");
+#ifdef DEBUG
+    perror("malloc()");
+#endif
+    return STATUS_ERROR;
+  }
+
+  /* read entries from the db */
+  uint64_t stop_at = entry_id;
+  size_t bytes_read = 0;
+  /* this will be the last entry read and is the one we need to mark */
+  int entries_read = read_entries_from_db(fd, header, entries, &bytes_read, &stop_at);
+  if (entries_read < 0) {
+    DEBUG_ERROR("failed to read entries from db\n");
+    /* free all the entries */
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
+      free(entries[i]->entry_raw_data);
+      free(entries[i]);
+    }
+    return STATUS_ERROR;
+  }
+
+  printf("entry id: %llu\n", stop_at);
+  size_t last_entry_data_len = entries[entries_read]->entry_raw_data_len;
+  size_t total_seek = (sizeof(db_header_t) + bytes_read) - (last_entry_data_len + 4 + 8 + 8);
+
+  if (lseek(fd, total_seek, SEEK_SET) < 0) {
+    DEBUG_ERROR("failed to seek for setting the entry deleted\n");
+#ifdef DEBUG
+    perror("lseek()");
+#endif
+
+    /* free all the entries */
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
+      free(entries[i]->entry_raw_data);
+      free(entries[i]);
+    }
+    return STATUS_ERROR;
+  }
+
+  uint64_t deleted_at = htonll(get_time_in_millis());
+  if (write(fd, &deleted_at, 8) != 8) {
+    DEBUG_ERROR("failed to write update for last entry\n");
+#ifdef DEBUG
+    perror("write()");
+#endif
+
+    /* free all the entries */
+    for (size_t i = 0; i < (size_t)entries_read; i++) {
+      free(entries[i]->entry_raw_data);
+      free(entries[i]);
+    }
+    return STATUS_ERROR;
+  }
+  printf("done");
 
   return 0;
 }
