@@ -5,7 +5,28 @@
 
 #include "todoctl/commands.h"
 #include "todoctl/db.h"
+#include "todoctl/debug.h"
 #include "todoctl/entry.h"
+
+/* daemonizes the process to run in the background */
+void daemonize(void) {
+  int fd;
+  if (fork() != 0) {
+#ifdef DEBUG
+    DEBUG_INFO("parent process already exists");
+#endif
+    exit(0);
+  }
+  setsid();
+  printf("todoctld running in background...\n");
+  /* close stdin and point STDOUT and STDERR to /dev/null */
+  if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+    dup2(fd, STDIN_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    if (fd > STDERR_FILENO) close(fd);
+  }
+}
 
 void print_usage(char *argv[]) {
   printf("Usage: %s [-a <task>] [-i]\n", argv[0]);
@@ -13,6 +34,7 @@ void print_usage(char *argv[]) {
   printf("\t -a adds a new task\n");
   printf("\t -l list all the tasks\n");
   printf("\t -k marks a task as done\n");
+  printf("\t -d deletes a task from todoctl\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -25,6 +47,7 @@ int main(int argc, char *argv[]) {
     case 'i': {
       if (create_new_todo_db() < 0) { exit(EXIT_FAILURE); }
       printf("Created .todo.db file at home directory...\n");
+      daemonize();
       break;
     }
 
